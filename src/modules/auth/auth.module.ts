@@ -5,6 +5,7 @@ import {AuthService} from './services';
 import {UserModule} from "../user/user.module";
 import {JwtModule} from "@nestjs/jwt";
 import {TokenService} from './services';
+import {JwtStrategy} from "./strategies/jwt.strategy";
 
 @Module({
     imports: [
@@ -17,6 +18,7 @@ import {TokenService} from './services';
         RefreshTokenRepository,
         AuthService,
         TokenService,
+        JwtStrategy,
     ],
     controllers: [AuthController],
 })
