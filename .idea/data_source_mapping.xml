@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<project version="4">
-  <component name="DataSourcePerFileMappings">
-    <file url="file://$APPLICATION_CONFIG_DIR$/consoles/db/a3daf296-07e5-4834-95aa-9da537ff5867/console.sql" value="a3daf296-07e5-4834-95aa-9da537ff5867" />
-    <file url="file://$PROJECT_DIR$/src/modules/database/migrations/sqls/20260120174332-create-user-table-up.sql" value="a3daf296-07e5-4834-95aa-9da537ff5867" />
-  </component>
-</project>

@@ -1,0 +1,1 @@
+export type {ICreateUser} from './user-repository.interface'

@@ -1,8 +1,9 @@
 import {Injectable} from "@nestjs/common";
 import {DatabaseService} from "../../database/database.service";
 import {UserEntity} from "../entities/user.entity";
-import {CreateUserDto} from "../dto/create-user.dto";
 import {UpdateUserDto} from "../dto/update-user.dto";
+import {mapObjectKeysToSql} from "../../../common/utils";
+import {ICreateUser} from "../interfaces";
 
 @Injectable()
 export class UserRepository {
@@ -17,7 +18,16 @@ export class UserRepository {
         return await this.db.queryMaybeOne<UserEntity>(query, [email]);
     }
 
-    async create(dto: CreateUserDto): Promise<UserEntity> {
+    async findById(userId: number): Promise<UserEntity | null> {
+        const query = `
+            SELECT *
+            FROM users
+            WHERE id = $1
+        `
+        return await this.db.queryMaybeOne<UserEntity>(query, [userId])
+    }
+
+    async create(data: ICreateUser): Promise<UserEntity> {
         const query = `
             INSERT INTO users (first_name, last_name, email, password)
             VALUES ($1, $2, $3, $4)
@@ -25,26 +35,20 @@ export class UserRepository {
         `
 
         const params = [
-            dto.firstName,
-            dto.lastName,
-            dto.email,
-            dto.password,
+            data.firstName,
+            data.lastName,
+            data.email,
+            data.password,
         ]
 
         return await this.db.queryOne<UserEntity>(query, params);
     }
 
-    async update(id: number, dto: UpdateUserDto) {
+    async update(id: number, dto: UpdateUserDto): Promise<UserEntity> {
         const keys = Object.keys(dto)
-        const setClause = keys.map((key, index) => {
-            const snakeCase = key.replace(/[A-Z]/g, (match) => {
-                return `_${match.toLowerCase()}`
-            })
-
-            return `${snakeCase} = $${index + 1}`
-        }).join(', ')
-
+        const setClause = mapObjectKeysToSql(keys)
         const values = keys.map((key) => dto[key])
+
         values.push(id)
 
         const idPosition = values.length

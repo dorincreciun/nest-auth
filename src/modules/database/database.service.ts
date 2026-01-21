@@ -5,7 +5,7 @@ import {
     OnModuleDestroy,
     OnModuleInit
 } from '@nestjs/common';
-import { Pool, QueryResultRow } from 'pg';
+import {Pool, PoolClient, QueryResultRow} from 'pg';
 import { ConfigService } from '@nestjs/config';
 import { DATABASE_MESSAGES } from './constants/messages.constants';
 
@@ -74,5 +74,25 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
     async queryMaybeOne<T extends QueryResultRow>(text: string, params?: any[]): Promise<T | null> {
         const rows = await this.query<T>(text, params);
         return rows.length > 0 ? rows[0] : null;
+    }
+
+    /**
+     * Execută un set de operațiuni în interiorul unei tranzacții.
+     * Primește un "callback" (o funcție) care primește clientul tranzacției.
+     */
+    async runInTransaction<T>(work: (client: PoolClient) => Promise<T>): Promise<T> {
+        const client = await this.pool.connect();
+        try {
+            await client.query('BEGIN');
+            const result = await work(client);
+            await client.query('COMMIT');
+            return result;
+        } catch (error) {
+            await client.query('ROLLBACK');
+            this.logger.error('Tranzacție eșuată, s-a făcut rollback', error.stack);
+            throw error;
+        } finally {
+            client.release();
+        }
     }
 }
