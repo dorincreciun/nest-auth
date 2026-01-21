@@ -6,6 +6,7 @@ import * as bcrypt from 'bcrypt';
 import {TokenService} from "./token.service";
 import {RefreshTokenRepository} from "../repositories/refresh-token.repository";
 import {RegisterResponse} from "../interfaces";
+import {AUTH_MESSAGES} from "../constants";
 
 @Injectable()
 export class AuthService {
@@ -22,7 +23,7 @@ export class AuthService {
         const existingUser = await this.userRepository.findByEmail(email)
 
         if (existingUser) {
-            throw new ConflictException('Această adresă de email este deja utilizată.')
+            throw new ConflictException(AUTH_MESSAGES.ERRORS.EMAIL_CONFLICT)
         }
 
         const hashedPassword = await bcrypt.hash(password, 10)

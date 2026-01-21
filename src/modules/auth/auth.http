@@ -1,0 +1,50 @@
+### Variabile Globale
+@baseUrl = http://localhost:3000
+@contentType = application/json
+
+### 1. Test Register: Succes (Creează un utilizator nou)
+# Acest test ar trebui să returneze 201 Created, userul și token-urile
+POST {{baseUrl}}/auth/register
+Content-Type: {{contentType}}
+
+{
+  "email": "test.user@example.com",
+  "password": "Password123!",
+  "firstName": "Ion",
+  "lastName": "Popescu"
+}
+
+### 2. Test Register: Eroare - Email Duplicat
+# Rulează asta imediat după primul test. Ar trebui să dea 409 Conflict.
+POST {{baseUrl}}/auth/register
+Content-Type: {{contentType}}
+
+{
+  "email": "test.user@example.com",
+  "password": "OtherPassword",
+  "firstName": "Gigel",
+  "lastName": "Vasile"
+}
+
+### 3. Test Register: Eroare - Email Invalid (Validare DTO)
+# Ar trebui să returneze 400 Bad Request dacă ai @IsEmail() în DTO
+POST {{baseUrl}}/auth/register
+Content-Type: {{contentType}}
+
+{
+  "email": "invalid-email-format",
+  "password": "Password123!",
+  "firstName": "Ion",
+  "lastName": "Popescu"
+}
+
+### 4. Test Register: Eroare - Parolă prea scurtă / Lipsă câmpuri
+# Ar trebui să dea 400 Bad Request
+POST {{baseUrl}}/auth/register
+Content-Type: {{contentType}}
+
+{
+  "email": "unique.user@example.com",
+  "password": "123",
+  "firstName": ""
+}
