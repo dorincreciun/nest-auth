@@ -4,7 +4,7 @@ import {ExtractJwt, Strategy} from 'passport-jwt';
 import {ConfigService} from "@nestjs/config";
 import {UserRepository} from "../../user/repositories/user.repository";
 import {IJwtPayload} from "../interfaces";
-import {AUTH_MESSAGES} from "../constants";
+import {AUTH_RESPONSES} from "../constants";
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
@@ -23,7 +23,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         const user = await this.userRepository.findById(payload.sub)
 
         if (!user) {
-            throw new UnauthorizedException(AUTH_MESSAGES.ERRORS.USER_NOT_FOUND);
+            throw new UnauthorizedException(AUTH_RESPONSES.ERRORS.USER_NOT_FOUND);
         }
 
         return {
