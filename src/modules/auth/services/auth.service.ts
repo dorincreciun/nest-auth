@@ -1,5 +1,4 @@
 import {ConflictException, Injectable, UnauthorizedException} from '@nestjs/common';
-import * as bcrypt from 'bcrypt';
 
 import {UserRepository} from '../../user/repositories/user.repository';
 import {UserEntity} from '../../user/entities/user.entity';
@@ -8,6 +7,8 @@ import {RefreshTokenRepository} from '../repositories';
 import {AUTH_RESPONSES} from '../constants';
 import {AuthResponse} from '../interfaces';
 import {TokenService} from './token.service';
+import {HashingService} from "./hashing.service";
+import { randomInt } from 'crypto';
 
 @Injectable()
 export class AuthService {
@@ -15,22 +16,25 @@ export class AuthService {
         private readonly userRepository: UserRepository,
         private readonly tokenService: TokenService,
         private readonly refreshTokenRepository: RefreshTokenRepository,
+        private readonly hashingService: HashingService,
     ) {
     }
 
-    async register(dto: RegisterDto): Promise<AuthResponse> {
+    async register(dto: RegisterDto): Promise<{ message: string }> {
         const existingUser = await this.userRepository.findByEmail(dto.email);
         if (existingUser) throw new ConflictException(AUTH_RESPONSES.ERRORS.EMAIL_CONFLICT);
 
-        const hashedPassword = await bcrypt.hash(dto.password, 10);
-        const newUser = await this.userRepository.create({...dto, password: hashedPassword});
+        const hashedPassword = await this.hashingService.hash(dto.password);
+        const verificationToken = randomInt(100000, 999999).toString();
 
-        return this.createAuthResponse(newUser);
+        await this.userRepository.create({...dto, password: hashedPassword, verificationToken});
+
+        return { message: `` };
     }
 
     async login(dto: LoginDto): Promise<AuthResponse> {
         const user = await this.userRepository.findByEmail(dto.email);
-        if (!user || !(await bcrypt.compare(dto.password, user.password))) {
+        if (!user || !(await this.hashingService.compare(dto.password, user.password))) {
             throw new UnauthorizedException(AUTH_RESPONSES.ERRORS.INVALID_CREDENTIALS);
         }
 
@@ -76,7 +80,7 @@ export class AuthService {
             sub: user.id,
         });
 
-        const refreshTokenHash = await bcrypt.hash(refreshToken.token, 10);
+        const refreshTokenHash = await this.hashingService.hash(refreshToken.token);
         await this.refreshTokenRepository.create({
             userId: user.id,
             tokenHashed: refreshTokenHash,
@@ -92,7 +96,7 @@ export class AuthService {
 
     private async findValidToken(tokens: any[], rawToken: string) {
         for (const record of tokens) {
-            if (await bcrypt.compare(rawToken, record.token_hash)) return record;
+            if (await this.hashingService.compare(rawToken, record.token_hash)) return record;
         }
         return null;
     }

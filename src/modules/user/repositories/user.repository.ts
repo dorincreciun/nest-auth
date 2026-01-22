@@ -29,8 +29,8 @@ export class UserRepository {
 
     async create(data: ICreateUser): Promise<UserEntity> {
         const query = `
-            INSERT INTO users (first_name, last_name, email, password)
-            VALUES ($1, $2, $3, $4)
+            INSERT INTO users (first_name, last_name, email, password, verification_token)
+            VALUES ($1, $2, $3, $4, $5)
             RETURNING *
         `
 
@@ -39,6 +39,7 @@ export class UserRepository {
             data.lastName,
             data.email,
             data.password,
+            data.verificationToken,
         ]
 
         return await this.db.queryOne<UserEntity>(query, params);

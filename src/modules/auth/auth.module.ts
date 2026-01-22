@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { AuthController } from './controllers';
-import { AuthService, CookieService, TokenService } from './services';
+import { AuthService, CookieService, TokenService, HashingService } from './services';
 import { RefreshTokenRepository } from './repositories';
 import { JwtStrategy } from './strategies';
 import { UserModule } from '../user/user.module';
@@ -20,6 +20,7 @@ import { UserModule } from '../user/user.module';
         CookieService,
         RefreshTokenRepository,
         JwtStrategy,
+        HashingService,
     ],
 })
 export class AuthModule {}
