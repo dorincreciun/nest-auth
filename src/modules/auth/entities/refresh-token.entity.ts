@@ -1,7 +1,7 @@
 export class RefreshTokenEntity {
     id: number;
     userId: number;
-    tokenHash: string
+    tokenHash: string;
     expiresAt: Date;
     createdAt: Date;
 }

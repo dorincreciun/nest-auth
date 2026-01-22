@@ -1,25 +1,27 @@
-import {NestFactory} from '@nestjs/core';
-import {AppModule} from './app.module';
-import {ValidationPipe} from "@nestjs/common";
+import { NestFactory } from '@nestjs/core';
+import { AppModule } from './app.module';
+import { ValidationPipe, Logger } from "@nestjs/common";
 import cookieParser from 'cookie-parser';
-import {ConfigService} from "@nestjs/config";
+import { ConfigService } from "@nestjs/config";
+import {EnvironmentVariables} from "./common/interfaces/config.interface";
 
 async function bootstrap() {
+    const logger = new Logger('Bootstrap');
     const app = await NestFactory.create(AppModule);
-    const configService = app.get(ConfigService);
 
-    const port = configService.get<number>('PORT') || 5000;
-    const apiPrefix = configService.get<string>('API_PREFIX') || 'api';
+    const configService = app.get(ConfigService<EnvironmentVariables, true>);
+
+    const port = configService.get('PORT', { infer: true });
+    const apiPrefix = configService.get('API_PREFIX', { infer: true });
+    const clientOrigin = configService.get('CLIENT_ORIGIN', { infer: true });
+    const baseUrl = configService.get('API_URL', { infer: true });
 
     app.setGlobalPrefix(apiPrefix);
-
     app.use(cookieParser());
-
     app.enableCors({
-        origin: configService.get<string>('CLIENT_ORIGIN'),
+        origin: clientOrigin,
         credentials: true,
     });
-
     app.useGlobalPipes(new ValidationPipe({
         whitelist: true,
         forbidNonWhitelisted: true,
@@ -28,8 +30,7 @@ async function bootstrap() {
 
     await app.listen(port);
 
-    const baseUrl = configService.get<string>('API_URL');
-    console.log(`🚀 Server: ${baseUrl}/${apiPrefix}`);
+    logger.log(`🚀 Server is running on: ${baseUrl}/${apiPrefix}`);
 }
 
 bootstrap();

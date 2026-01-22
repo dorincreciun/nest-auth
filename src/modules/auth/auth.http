@@ -1,9 +1,12 @@
 ### Variabile Globale
-@baseUrl = http://localhost:3000
+@baseUrl = http://127.0.0.1:5000/api/v1
 @contentType = application/json
 
-### 1. Test Register: Succes (Creează un utilizator nou)
-# Acest test ar trebui să returneze 201 Created, userul și token-urile
+# ==============================================================================
+# SECȚIUNEA 1: REGISTER
+# ==============================================================================
+
+### 1. Test Register: Succes
 POST {{baseUrl}}/auth/register
 Content-Type: {{contentType}}
 
@@ -14,37 +17,46 @@ Content-Type: {{contentType}}
   "lastName": "Popescu"
 }
 
-### 2. Test Register: Eroare - Email Duplicat
-# Rulează asta imediat după primul test. Ar trebui să dea 409 Conflict.
-POST {{baseUrl}}/auth/register
+> {%
+    // Această linie salvează accessToken-ul în variabila globală a mediului
+    client.global.set("accessToken", response.body.accessToken);
+%}
+
+###
+# ==============================================================================
+# SECȚIUNEA 2: LOGIN
+# ==============================================================================
+
+### 2. Test Login: Succes
+POST {{baseUrl}}/auth/login
 Content-Type: {{contentType}}
 
 {
   "email": "test.user@example.com",
-  "password": "OtherPassword",
-  "firstName": "Gigel",
-  "lastName": "Vasile"
+  "password": "Password123!"
 }
 
-### 3. Test Register: Eroare - Email Invalid (Validare DTO)
-# Ar trebui să returneze 400 Bad Request dacă ai @IsEmail() în DTO
-POST {{baseUrl}}/auth/register
+> {%
+    client.global.set("accessToken", response.body.accessToken);
+%}
+
+###
+# ==============================================================================
+# SECȚIUNEA 3: RUTE PROTEJATE (Folosind variabila salvată)
+# ==============================================================================
+
+### 3. Test Refresh Token (Cookie-ul este trimis automat de WebStorm)
+POST {{baseUrl}}/auth/refresh
 Content-Type: {{contentType}}
 
-{
-  "email": "invalid-email-format",
-  "password": "Password123!",
-  "firstName": "Ion",
-  "lastName": "Popescu"
-}
+> {%
+    client.global.set("accessToken", response.body.accessToken);
+%}
 
-### 4. Test Register: Eroare - Parolă prea scurtă / Lipsă câmpuri
-# Ar trebui să dea 400 Bad Request
-POST {{baseUrl}}/auth/register
+### 4. Test Logout
+POST {{baseUrl}}/auth/logout
 Content-Type: {{contentType}}
 
-{
-  "email": "unique.user@example.com",
-  "password": "123",
-  "firstName": ""
-}
+### 5. Test Rută Protejată (Exemplu)
+GET {{baseUrl}}/users/me
+Authorization: Bearer {{accessToken}}

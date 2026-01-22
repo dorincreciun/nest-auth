@@ -1,12 +1,13 @@
-import {ConflictException, Injectable} from '@nestjs/common';
-import {RegisterDto} from "../dto";
-import {UserService} from "../../user/user.service";
-import {UserRepository} from "../../user/repositories/user.repository";
+import {ConflictException, Injectable, UnauthorizedException} from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
-import {TokenService} from "./token.service";
-import {RefreshTokenRepository} from "../repositories/refresh-token.repository";
-import {RegisterResponse} from "../interfaces";
-import {AUTH_RESPONSES} from "../constants";
+
+import {UserRepository} from '../../user/repositories/user.repository';
+import {UserEntity} from '../../user/entities/user.entity';
+import {LoginDto, RegisterDto} from '../dto';
+import {RefreshTokenRepository} from '../repositories';
+import {AUTH_RESPONSES} from '../constants';
+import {AuthResponse} from '../interfaces';
+import {TokenService} from './token.service';
 
 @Injectable()
 export class AuthService {
@@ -17,44 +18,82 @@ export class AuthService {
     ) {
     }
 
-    async register(dto: RegisterDto): Promise<RegisterResponse> {
-        const {email, password} = dto
+    async register(dto: RegisterDto): Promise<AuthResponse> {
+        const existingUser = await this.userRepository.findByEmail(dto.email);
+        if (existingUser) throw new ConflictException(AUTH_RESPONSES.ERRORS.EMAIL_CONFLICT);
 
-        const existingUser = await this.userRepository.findByEmail(email)
+        const hashedPassword = await bcrypt.hash(dto.password, 10);
+        const newUser = await this.userRepository.create({...dto, password: hashedPassword});
 
-        if (existingUser) {
-            throw new ConflictException(AUTH_RESPONSES.ERRORS.EMAIL_CONFLICT)
+        return this.createAuthResponse(newUser);
+    }
+
+    async login(dto: LoginDto): Promise<AuthResponse> {
+        const user = await this.userRepository.findByEmail(dto.email);
+        if (!user || !(await bcrypt.compare(dto.password, user.password))) {
+            throw new UnauthorizedException(AUTH_RESPONSES.ERRORS.INVALID_CREDENTIALS);
         }
 
-        const hashedPassword = await bcrypt.hash(password, 10)
+        return this.createAuthResponse(user);
+    }
 
-        const newUser = await this.userRepository.create({
-            ...dto,
-            password: hashedPassword
-        })
+    async refreshTokens(oldToken: string): Promise<AuthResponse> {
+        const payload = await this.tokenService.verifyToken(oldToken, 'refreshToken');
 
+        const storedTokens = await this.refreshTokenRepository.findAllByUserId(payload.sub);
+        const currentTokenRecord = await this.findValidToken(storedTokens, oldToken);
+
+        if (!currentTokenRecord) {
+            throw new UnauthorizedException(AUTH_RESPONSES.ERRORS.SESSION_EXPIRED);
+        }
+
+        const user = await this.userRepository.findById(payload.sub);
+        if (!user) throw new UnauthorizedException(AUTH_RESPONSES.ERRORS.USER_NOT_FOUND);
+
+        await this.refreshTokenRepository.deleteExpiredTokens();
+        await this.refreshTokenRepository.deleteById(currentTokenRecord.id);
+
+        return this.createAuthResponse(user);
+    }
+
+    async logout(refreshToken: string): Promise<void> {
+        try {
+            const payload = await this.tokenService.verifyToken(refreshToken, 'refreshToken');
+
+            const storedTokens = await this.refreshTokenRepository.findAllByUserId(payload.sub);
+
+            const tokenRecord = await this.findValidToken(storedTokens, refreshToken);
+
+            if (tokenRecord) {
+                await this.refreshTokenRepository.deleteById(tokenRecord.id);
+            }
+        } catch (error) {
+        }
+    }
+
+    private async createAuthResponse(user: UserEntity): Promise<AuthResponse> {
         const {refreshToken, accessToken} = await this.tokenService.generateTokens({
-            sub: newUser.id
-        })
+            sub: user.id,
+        });
 
-        const refreshTokenHash = await bcrypt.hash(refreshToken.token, 10)
-
+        const refreshTokenHash = await bcrypt.hash(refreshToken.token, 10);
         await this.refreshTokenRepository.create({
-            userId: newUser.id,
+            userId: user.id,
             tokenHashed: refreshTokenHash,
             expiresAt: refreshToken.expiresAt,
         });
 
         return {
-            user: {
-                id: newUser.id,
-                email: newUser.email,
-                firstName: newUser.firstName,
-                lastName: newUser.lastName,
-
-            },
+            user: {id: user.id, email: user.email, firstName: user.firstName, lastName: user.lastName},
             accessToken,
-            refreshToken
+            refreshToken,
+        };
+    }
+
+    private async findValidToken(tokens: any[], rawToken: string) {
+        for (const record of tokens) {
+            if (await bcrypt.compare(rawToken, record.token_hash)) return record;
         }
+        return null;
     }
 }

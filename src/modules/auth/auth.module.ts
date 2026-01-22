@@ -1,11 +1,10 @@
-import {Module} from '@nestjs/common';
-import {RefreshTokenRepository} from "./repositories/refresh-token.repository";
-import {AuthController} from './controllers/auth.controller';
-import {AuthService} from './services';
-import {UserModule} from "../user/user.module";
-import {JwtModule} from "@nestjs/jwt";
-import {TokenService} from './services';
-import {JwtStrategy} from "./strategies/jwt.strategy";
+import { Module } from '@nestjs/common';
+import { JwtModule } from '@nestjs/jwt';
+import { AuthController } from './controllers';
+import { AuthService, CookieService, TokenService } from './services';
+import { RefreshTokenRepository } from './repositories';
+import { JwtStrategy } from './strategies';
+import { UserModule } from '../user/user.module';
 
 @Module({
     imports: [
@@ -14,13 +13,13 @@ import {JwtStrategy} from "./strategies/jwt.strategy";
             global: true,
         }),
     ],
+    controllers: [AuthController],
     providers: [
-        RefreshTokenRepository,
         AuthService,
         TokenService,
+        CookieService,
+        RefreshTokenRepository,
         JwtStrategy,
     ],
-    controllers: [AuthController],
 })
-export class AuthModule {
-}
+export class AuthModule {}

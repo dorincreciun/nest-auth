@@ -1,6 +1,6 @@
-import {IsEmail, IsNotEmpty, IsString, MaxLength, MinLength} from "class-validator";
+import { IsEmail, IsNotEmpty, IsString, MaxLength, MinLength } from 'class-validator';
+import { Transform } from 'class-transformer';
 import { VALIDATION_MESSAGES as MSG } from '../constants';
-import {Transform} from "class-transformer";
 
 export class RegisterDto {
     @IsString({ message: MSG.FIRST_NAME.STRING })
