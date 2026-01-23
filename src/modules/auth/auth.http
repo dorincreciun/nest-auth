@@ -11,7 +11,7 @@ POST {{baseUrl}}/auth/register
 Content-Type: {{contentType}}
 
 {
-  "email": "test.user@example.com",
+  "email": "creciundorin25@gmail.com",
   "password": "Password123!",
   "firstName": "Ion",
   "lastName": "Popescu"

@@ -8,7 +8,8 @@ import {AUTH_RESPONSES} from '../constants';
 import {AuthResponse} from '../interfaces';
 import {TokenService} from './token.service';
 import {HashingService} from "./hashing.service";
-import { randomInt } from 'crypto';
+import {randomInt} from 'crypto';
+import {MailerService} from "@nestjs-modules/mailer";
 
 @Injectable()
 export class AuthService {
@@ -17,19 +18,35 @@ export class AuthService {
         private readonly tokenService: TokenService,
         private readonly refreshTokenRepository: RefreshTokenRepository,
         private readonly hashingService: HashingService,
+        private readonly mailService: MailerService,
     ) {
     }
 
-    async register(dto: RegisterDto): Promise<{ message: string }> {
+    async register(dto: RegisterDto) {
         const existingUser = await this.userRepository.findByEmail(dto.email);
         if (existingUser) throw new ConflictException(AUTH_RESPONSES.ERRORS.EMAIL_CONFLICT);
 
         const hashedPassword = await this.hashingService.hash(dto.password);
         const verificationToken = randomInt(100000, 999999).toString();
 
-        await this.userRepository.create({...dto, password: hashedPassword, verificationToken});
+        const newUser = await this.userRepository.create({...dto, password: hashedPassword, verificationToken});
 
-        return { message: `` };
+        if (newUser) {
+            const name = newUser.firstName + " " + newUser.lastName
+            const code = newUser.verificationToken?.split('').join(" - ")
+
+            await this.mailService.sendMail({
+                to: newUser.email,
+                subject: 'Bun venit în comunitate!',
+                template: './welcome',
+                context: {
+                    name: name,
+                    code: code,
+                },
+            })
+        }
+
+        return newUser;
     }
 
     async login(dto: LoginDto): Promise<AuthResponse> {
